@@ -1,0 +1,231 @@
+
+{% extends 'base.html' %}
+
+{% block title %}{{ ticket_ref(ticket.id) }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <div class="breadcrumb">
+            <a href="{{ url_for('tickets.list_tickets') }}">Tickets</a>
+            <span>/</span>
+            <span>{{ ticket_ref(ticket.id) }}</span>
+        </div>
+
+        <h1>{{ ticket.title }}</h1>
+        <p class="muted">
+            {{ ticket_ref(ticket.id) }} · Created {{ ticket.created_at | localtime }}
+        </p>
+    </div>
+
+    <a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-secondary">
+        ← Back to Tickets
+    </a>
+</div>
+
+<div class="ticket-detail-grid">
+
+    <div class="detail-main">
+
+        <section class="detail-card">
+            <div class="detail-card-header">
+                <h2>Issue Description</h2>
+                <span class="priority-badge priority-{{ ticket.priority | lower }}">
+                    {{ ticket.priority }}
+                </span>
+            </div>
+
+            <p class="ticket-description">
+                {{ ticket.description }}
+            </p>
+
+            <div class="detail-info-grid">
+                <div>
+                    <span class="detail-label">Requester</span>
+                    <strong>{{ ticket.requester_name }}</strong>
+                </div>
+
+                <div>
+                    <span class="detail-label">Email Address</span>
+                    <strong>{{ ticket.requester_email }}</strong>
+                </div>
+
+                <div>
+                    <span class="detail-label">Category</span>
+                    <strong>{{ ticket.category }}</strong>
+                </div>
+
+                <div>
+                    <span class="detail-label">Created At</span>
+                    <strong>{{ ticket.created_at | localtime }}</strong>
+                </div>
+
+                <div>
+                    <span class="detail-label">Last Updated</span>
+                    <strong>{{ ticket.updated_at | localtime }}</strong>
+                </div>
+
+                <div>
+                    <span class="detail-label">Assigned To</span>
+                    <strong>{{ ticket.assigned_name or 'Unassigned' }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="detail-card">
+            <div class="detail-card-header">
+                <h2>Update Ticket</h2>
+                <span class="muted">Manage ticket progress</span>
+            </div>
+
+            <form
+                method="POST"
+                action="{{ url_for('tickets.update', ticket_id=ticket.id) }}"
+                class="ticket-form"
+            >
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="status">Ticket Status</label>
+                        <select id="status" name="status">
+                            {% for status in ['Open', 'In Progress', 'Resolved', 'Closed'] %}
+                                <option
+                                    value="{{ status }}"
+                                    {% if ticket.status == status %}selected{% endif %}
+                                >
+                                    {{ status }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            {% for priority in ['Critical', 'High', 'Medium', 'Low'] %}
+                                <option
+                                    value="{{ priority }}"
+                                    {% if ticket.priority == priority %}selected{% endif %}
+                                >
+                                    {{ priority }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="assigned_to">Assign Technician</label>
+
+                    <select
+                        id="assigned_to"
+                        name="assigned_to"
+                        {% if g.user.role != 'admin' %}disabled{% endif %}
+                    >
+                        <option value="">Unassigned</option>
+
+                        {% for user in users %}
+                            <option
+                                value="{{ user.id }}"
+                                {% if ticket.assigned_to == user.id %}selected{% endif %}
+                            >
+                                {{ user.full_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    {% if g.user.role != 'admin' %}
+                        <small class="muted">
+                            Only administrators can reassign tickets.
+                        </small>
+
+                        <input
+                            type="hidden"
+                            name="assigned_to"
+                            value="{{ ticket.assigned_to or '' }}"
+                        >
+                    {% endif %}
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn">
+                        Save Changes →
+                    </button>
+                </div>
+
+            </form>
+        </section>
+
+        <section class="detail-card">
+            <div class="detail-card-header">
+                <h2>Activity History</h2>
+                <span class="muted">{{ history | length }} activities</span>
+            </div>
+
+            {% if history %}
+                <div class="activity-timeline">
+                    {% for item in history %}
+                        <div class="activity-item">
+                            <div class="activity-dot"></div>
+
+                            <div class="activity-content">
+                                <strong>{{ item.action }}</strong>
+
+                                {% if item.details %}
+                                    <p>{{ item.details }}</p>
+                                {% endif %}
+
+                                <span class="muted">
+                                    {{ item.user_name or 'System' }}
+                                    · {{ item.created_at | localtime }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state">No activity recorded yet.</p>
+            {% endif %}
+        </section>
+
+    </div>
+
+    <aside class="detail-sidebar">
+
+        <section class="detail-card">
+            <h3>Ticket Status</h3>
+
+            <span class="status-badge status-{{ ticket.status | lower | replace(' ', '-') }}">
+                {{ ticket.status }}
+            </span>
+
+            <div class="sidebar-divider"></div>
+
+            <h3>SLA Information</h3>
+
+            <p class="detail-label">Resolution Deadline</p>
+            <strong>{{ ticket.due_at | localtime }}</strong>
+
+            <p class="sla-countdown {% if is_overdue(ticket) %}text-danger{% endif %}">
+                {{ time_left(ticket) }}
+            </p>
+
+            {% if is_overdue(ticket) %}
+                <span class="overdue-label">SLA OVERDUE</span>
+            {% endif %}
+        </section>
+
+        <section class="detail-card">
+            <h3>Ticket Reference</h3>
+            <div class="ticket-reference">
+                {{ ticket_ref(ticket.id) }}
+            </div>
+            <p class="muted">Use this reference when discussing this issue.</p>
+        </section>
+
+    </aside>
+
+</div>
+
+{% endblock %}

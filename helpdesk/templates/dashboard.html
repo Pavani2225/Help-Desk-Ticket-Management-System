@@ -1,0 +1,408 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div>
+        <span class="dashboard-eyebrow">OVERVIEW</span>
+        <h1>IT Helpdesk Command Center</h1>
+        <p class="muted">
+            Monitor support operations, ticket priorities and team performance.
+        </p>
+    </div>
+
+    <a href="{{ url_for('tickets.new_ticket') }}" class="btn">
+        + Create New Ticket
+    </a>
+</div>
+
+<!-- Statistics -->
+<section class="stats dashboard-stats">
+
+    <a class="stat stat-open"
+       href="{{ url_for('tickets.list_tickets', status='Open') }}">
+        <span class="stat-icon">◉</span>
+        <span class="n">{{ by_status.get('Open', 0) }}</span>
+        <span class="stat-title">Open Tickets</span>
+        <small>Awaiting action →</small>
+    </a>
+
+    <a class="stat stat-progress"
+       href="{{ url_for('tickets.list_tickets', status='In Progress') }}">
+        <span class="stat-icon">◷</span>
+        <span class="n">{{ by_status.get('In Progress', 0) }}</span>
+        <span class="stat-title">In Progress</span>
+        <small>Being handled →</small>
+    </a>
+
+    <a class="stat stat-resolved"
+       href="{{ url_for('tickets.list_tickets', status='Resolved') }}">
+        <span class="stat-icon">✓</span>
+        <span class="n">{{ by_status.get('Resolved', 0) }}</span>
+        <span class="stat-title">Resolved</span>
+        <small>Successfully resolved →</small>
+    </a>
+
+    <a class="stat stat-closed"
+       href="{{ url_for('tickets.list_tickets', status='Closed') }}">
+        <span class="stat-icon">▣</span>
+        <span class="n">{{ by_status.get('Closed', 0) }}</span>
+        <span class="stat-title">Closed</span>
+        <small>Completed tickets →</small>
+    </a>
+
+    <a class="stat stat-overdue"
+       href="{{ url_for('tickets.list_tickets', overdue=1) }}">
+        <span class="stat-icon">⚠</span>
+        <span class="n">{{ stats.overdue }}</span>
+        <span class="stat-title">Overdue</span>
+        <small>Require attention →</small>
+    </a>
+
+    <a class="stat stat-unassigned"
+       href="{{ url_for('tickets.list_tickets', status='active', assigned='none') }}">
+        <span class="stat-icon">♙</span>
+        <span class="n">{{ stats.unassigned }}</span>
+        <span class="stat-title">Unassigned</span>
+        <small>Waiting for assignment →</small>
+    </a>
+
+</section>
+
+<!-- Analytics -->
+<section class="dashboard-panels analytics-panels">
+
+    <div class="card dashboard-panel chart-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Ticket Priority</h2>
+                <p class="muted">Distribution of active tickets</p>
+            </div>
+            <span class="panel-icon">◈</span>
+        </div>
+
+        <div class="chart-container doughnut-container">
+            <canvas id="priorityChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card dashboard-panel chart-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Ticket Status Overview</h2>
+                <p class="muted">Current support workload</p>
+            </div>
+            <span class="panel-icon">▥</span>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card dashboard-panel chart-panel trend-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Weekly Ticket Activity</h2>
+                <p class="muted">
+                    Tickets created and resolved over the last 7 days
+                </p>
+            </div>
+            <span class="panel-icon">↗</span>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="ticketTrendChart"></canvas>
+        </div>
+    </div>
+
+</section>
+
+<!-- SLA Performance -->
+<section class="card sla-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>SLA Performance</h2>
+            <p class="muted">
+                Resolved tickets completed within their SLA target
+            </p>
+        </div>
+
+        <span class="sla-percentage">{{ stats.sla_rate }}%</span>
+    </div>
+
+    <div class="sla-track">
+        <div class="sla-fill"
+             data-width="{{ stats.sla_rate }}">
+        </div>
+    </div>
+
+    <div class="sla-footer">
+        <span>Resolution performance</span>
+        <strong>{{ stats.sla_rate }}% achieved</strong>
+    </div>
+</section>
+
+<!-- Ticket Resolution Analysis -->
+<section class="resolution-section">
+
+    <div class="section-heading">
+        <div>
+            <span class="dashboard-eyebrow">PERFORMANCE INSIGHTS</span>
+            <h2>Ticket Resolution Analysis</h2>
+            <p class="muted">
+                Understand support team resolution efficiency.
+            </p>
+        </div>
+    </div>
+
+    <div class="resolution-stats">
+
+        <div class="card resolution-card">
+            <span class="resolution-icon">◷</span>
+            <span class="resolution-label">Average Resolution Time</span>
+            <strong class="resolution-value">
+                {{ resolution_stats.average_time }}
+            </strong>
+            <small class="muted">Across completed tickets</small>
+        </div>
+
+        <div class="card resolution-card">
+            <span class="resolution-icon">⚡</span>
+            <span class="resolution-label">Fastest Resolution</span>
+            <strong class="resolution-value">
+                {{ resolution_stats.fastest_time }}
+            </strong>
+            <small class="muted">Quickest completed ticket</small>
+        </div>
+
+        <div class="card resolution-card">
+            <span class="resolution-icon">◴</span>
+            <span class="resolution-label">Longest Resolution</span>
+            <strong class="resolution-value">
+                {{ resolution_stats.longest_time }}
+            </strong>
+            <small class="muted">Longest completed ticket</small>
+        </div>
+
+        <div class="card resolution-card">
+            <span class="resolution-icon">✓</span>
+            <span class="resolution-label">Completed Tickets</span>
+            <strong class="resolution-value">
+                {{ resolution_stats.completed }}
+            </strong>
+            <small class="muted">Resolved or closed</small>
+        </div>
+
+    </div>
+
+</section>
+
+<!-- Technician Performance Analysis -->
+<section class="card technician-panel">
+
+    <div class="panel-heading">
+        <div>
+            <span class="dashboard-eyebrow">TEAM ANALYTICS</span>
+            <h2>Technician Performance</h2>
+            <p class="muted">
+                Monitor workload, completed tickets and resolution efficiency.
+            </p>
+        </div>
+
+        <span class="panel-icon">♙</span>
+    </div>
+
+    {% if technician_stats %}
+
+    <div class="technician-table-wrapper">
+        <table class="technician-table">
+
+            <thead>
+                <tr>
+                    <th>Technician</th>
+                    <th>Assigned</th>
+                    <th>Resolved</th>
+                    <th>Active</th>
+                    <th>Resolution Rate</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for technician in technician_stats %}
+                <tr>
+
+                    <td>
+                        <div class="technician-name">
+                            <span class="technician-avatar">
+                                {{ technician.name[0]|upper }}
+                            </span>
+
+                            <strong>{{ technician.name }}</strong>
+                        </div>
+                    </td>
+
+                    <td>
+                        <strong>{{ technician.total_assigned }}</strong>
+                    </td>
+
+                    <td>
+                        <span class="technician-resolved">
+                            {{ technician.resolved }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="technician-active">
+                            {{ technician.open }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="technician-rate">
+                            <div class="technician-progress-track">
+    <div class="technician-progress-fill"
+         style="--progress: {{ technician.resolution_rate }}%;">
+    </div>
+</div>
+
+                            <strong>{{ technician.resolution_rate }}%</strong>
+                        </div>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        <span>♙</span>
+        <h3>No technicians found</h3>
+        <p class="muted">
+            Active technician accounts will appear here.
+        </p>
+    </div>
+
+    {% endif %}
+
+</section>
+
+<!-- Most Urgent Tickets -->
+<section class="card urgent-panel">
+
+    <div class="panel-heading">
+        <div>
+            <h2>Most Urgent Tickets</h2>
+            <p class="muted">
+                Tickets requiring immediate attention
+            </p>
+        </div>
+
+        <span class="panel-icon">⚠</span>
+    </div>
+
+    {% if urgent %}
+
+    <div class="urgent-table-wrapper">
+        <table class="urgent-table">
+
+            <thead>
+                <tr>
+                    <th>Ticket ID</th>
+                    <th>Issue</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>SLA Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for ticket in urgent %}
+                <tr>
+
+                    <td>
+                        <strong>{{ ticket_ref(ticket['id']) }}</strong>
+                    </td>
+
+                    <td class="urgent-title">
+                        {{ ticket['title'] }}
+                    </td>
+
+                    <td>
+                        <span class="pill prio-{{ ticket['priority']|lower }}">
+                            {{ ticket['priority'] }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="status-badge status-{{ ticket['status']|lower|replace(' ', '-') }}">
+                            {{ ticket['status'] }}
+                        </span>
+                    </td>
+
+                    <td>{{ time_left(ticket) }}</td>
+
+                    <td>
+                        <a class="table-action"
+                           href="{{ url_for('tickets.detail', ticket_id=ticket['id']) }}">
+                            View Details →
+                        </a>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        <span>✓</span>
+        <h3>All clear!</h3>
+        <p class="muted">
+            There are no active urgent tickets right now.
+        </p>
+    </div>
+
+    {% endif %}
+
+    <a class="panel-footer-link"
+       href="{{ url_for('tickets.list_tickets') }}">
+        View all tickets →
+    </a>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script id="dashboard-data" type="application/json">
+{
+    "priorityLabels": {{ by_priority.keys() | list | tojson }},
+    "priorityValues": {{ by_priority.values() | list | tojson }},
+    "statusLabels": {{ by_status.keys() | list | tojson }},
+    "statusValues": {{ by_status.values() | list | tojson }},
+    "weeklyLabels": {{ weekly_labels | tojson }},
+    "weeklyCreated": {{ weekly_created | tojson }},
+    "weeklyResolved": {{ weekly_resolved | tojson }}
+}
+</script>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+{% endblock %}

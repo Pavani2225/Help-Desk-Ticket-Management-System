@@ -1,0 +1,78 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Ticket Submitted{% endblock %}
+
+{% block content %}
+
+<div class="success-page">
+
+    <div class="success-card">
+
+        <div class="success-icon">
+            ✓
+        </div>
+
+        <h1>Ticket Submitted Successfully!</h1>
+
+        <p class="muted">
+            Your IT support request has been created.
+            Our support team will review it shortly.
+        </p>
+
+        <div class="submitted-reference">
+            <span class="detail-label">Your Ticket Reference</span>
+            <strong>{{ ticket_ref(ticket.id) }}</strong>
+        </div>
+
+        <div class="submitted-details">
+
+            <div>
+                <span class="detail-label">Issue</span>
+                <strong>{{ ticket.title }}</strong>
+            </div>
+
+            <div>
+                <span class="detail-label">Category</span>
+                <strong>{{ ticket.category }}</strong>
+            </div>
+
+            <div>
+                <span class="detail-label">Priority</span>
+                <span class="priority-badge priority-{{ ticket.priority | lower }}">
+                    {{ ticket.priority }}
+                </span>
+            </div>
+
+            <div>
+                <span class="detail-label">Status</span>
+                <span class="status-badge status-open">
+                    {{ ticket.status }}
+                </span>
+            </div>
+
+        </div>
+
+        <div class="success-actions">
+
+            <a
+                href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+                class="btn"
+            >
+                View Ticket →
+            </a>
+
+            <a
+                href="{{ url_for('tickets.dashboard') }}"
+                class="btn btn-secondary"
+            >
+                Back to Dashboard
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

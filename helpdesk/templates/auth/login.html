@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In | IT Support Desk</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+    <main class="login-card">
+        <div class="login-brand">
+            <div class="brand-icon">IT</div>
+            <h1>IT Support Desk</h1>
+            <p>Sign in to your support workspace</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <label for="username">Username</label>
+            <input id="username" name="username"
+                   type="text" placeholder="Enter your username"
+                   autocomplete="username" required>
+
+            <label for="password">Password</label>
+            <input id="password" name="password"
+                   type="password" placeholder="Enter your password"
+                   autocomplete="current-password" required>
+
+            <button class="btn login-btn" type="submit">
+                Sign In
+            </button>
+        </form>
+
+        <div class="demo-login">
+            <strong>Demo access</strong>
+            <p>Username: rahul / priya / arjun</p>
+            <p>Password: Helpdesk@2026</p>
+        </div>
+    </main>
+</body>
+</html>

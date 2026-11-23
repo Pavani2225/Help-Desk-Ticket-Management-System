@@ -1,0 +1,213 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Tickets{% endblock %}
+{% block breadcrumb %}Tickets{% endblock %}
+
+{% block content %}
+
+<div class="page-heading">
+    <div>
+        <h1>Ticket Management</h1>
+        <p class="muted">Search, filter and manage IT support requests.</p>
+    </div>
+
+    <div class="page-actions">
+        {% if g.user['role'] == 'admin' %}
+        <a class="btn btn-secondary"
+           href="{{ url_for('tickets.export_tickets') }}">
+            <span>↓</span> Export CSV
+        </a>
+        {% endif %}
+
+        <a class="btn" href="{{ url_for('tickets.new_ticket') }}">
+            + Create Ticket
+        </a>
+    </div>
+</div>
+
+<div class="card filter-card">
+    <form method="GET" action="{{ url_for('tickets.list_tickets') }}"
+          class="filter-form">
+
+        <input type="search" name="q"
+               placeholder="Search ticket ID, title or requester..."
+               value="{{ filters.q }}">
+
+        <select name="status">
+            <option value="">All statuses</option>
+            <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="Open" {% if filters.status == 'Open' %}selected{% endif %}>Open</option>
+            <option value="In Progress" {% if filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+            <option value="Resolved" {% if filters.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+            <option value="Closed" {% if filters.status == 'Closed' %}selected{% endif %}>Closed</option>
+        </select>
+
+        <select name="priority">
+            <option value="">All priorities</option>
+            {% for p in ['Critical', 'High', 'Medium', 'Low'] %}
+            <option value="{{ p }}"
+                {% if filters.priority == p %}selected{% endif %}>
+                {{ p }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <select name="assigned">
+            <option value="">All assignments</option>
+            <option value="none" {% if filters.assigned == 'none' %}selected{% endif %}>Unassigned</option>
+            <option value="me" {% if filters.assigned == 'me' %}selected{% endif %}>Assigned to me</option>
+        </select>
+
+        <button class="btn" type="submit">Apply Filters</button>
+
+        <a class="btn btn-secondary"
+           href="{{ url_for('tickets.list_tickets') }}">Reset</a>
+    </form>
+</div>
+
+<div class="card table-card">
+    <div class="table-heading">
+        <div>
+            <h2>All Support Tickets</h2>
+            <p class="muted">
+                Showing
+                {{ (page - 1) * 10 + 1 if total_tickets else 0 }}
+                –
+                {{ [page * 10, total_tickets]|min }}
+                of {{ total_tickets }} ticket(s)
+            </p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket ID</th>
+                    <th>Issue</th>
+                    <th>Requester</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>
+                        <a class="ticket-id"
+                           href="{{ url_for('tickets.detail', ticket_id=ticket['id']) }}">
+                            {{ ticket_ref(ticket['id']) }}
+                        </a>
+                    </td>
+
+                    <td>
+                        <a class="ticket-title"
+                           href="{{ url_for('tickets.detail', ticket_id=ticket['id']) }}">
+                            {{ ticket['title'] }}
+                        </a>
+                    </td>
+
+                    <td>{{ ticket['requester_name'] }}</td>
+                    <td>{{ ticket['category'] }}</td>
+
+                    <td>
+                        <span class="pill prio-{{ ticket['priority']|lower }}">
+                            {{ ticket['priority'] }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="pill status-{{ ticket['status']|lower|replace(' ', '-') }}">
+                            {{ ticket['status'] }}
+                        </span>
+                    </td>
+
+                    <td>{{ ticket['assigned_name'] or 'Unassigned' }}</td>
+                    <td>{{ ticket['created_at']|localtime }}</td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="8" class="empty-state">
+                        No tickets found. Try changing your filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+
+        {% if page > 1 %}
+        <a class="btn btn-secondary"
+           href="{{ url_for(
+               'tickets.list_tickets',
+               page=page - 1,
+               q=filters.q,
+               status=filters.status,
+               priority=filters.priority,
+               category=filters.category,
+               assigned=filters.assigned,
+               overdue=filters.overdue
+           ) }}">
+            &laquo; Previous
+        </a>
+        {% endif %}
+
+        <div class="pagination-pages">
+            {% for number in range(
+                [1, page - 2]|max,
+                [total_pages + 1, page + 3]|min
+            ) %}
+
+                {% if number == page %}
+                <span class="btn pagination-current">
+                    {{ number }}
+                </span>
+                {% else %}
+                <a class="btn btn-secondary"
+                   href="{{ url_for(
+                       'tickets.list_tickets',
+                       page=number,
+                       q=filters.q,
+                       status=filters.status,
+                       priority=filters.priority,
+                       category=filters.category,
+                       assigned=filters.assigned,
+                       overdue=filters.overdue
+                   ) }}">
+                    {{ number }}
+                </a>
+                {% endif %}
+
+            {% endfor %}
+        </div>
+
+        {% if page < total_pages %}
+        <a class="btn btn-secondary"
+           href="{{ url_for(
+               'tickets.list_tickets',
+               page=page + 1,
+               q=filters.q,
+               status=filters.status,
+               priority=filters.priority,
+               category=filters.category,
+               assigned=filters.assigned,
+               overdue=filters.overdue
+           ) }}">
+            Next &raquo;
+        </a>
+        {% endif %}
+
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
